@@ -1,7 +1,7 @@
 import numpy as np
 
 def gen(
-        N: int, 
+        n: int, 
         g_prob: float = 0.25, 
         fixed: bool = True, 
         dimers: bool = False
@@ -23,24 +23,24 @@ def gen(
     Sample Runs:
         (48, 0.25, True, False) -> LLGLLLGLLLLLGLGLLLLLLLLLLGLLLLLGLGGGGLLGLLLLGLLL
         (48, 0.25, True, True) -> LLLLGGLLLLLLLLLLGGLLGGGGLLLLLLLLLLGGLLLLLLLLLLGG
-        (48, 0.25, True, False) -> LLLGGLGLLGLLGLLLLGLLLLLLLLLLLLLGLLGLLLGLLGGGGLLL
+        (48, 0.25, False, False) -> LLLGGLGLLGLLGLLLLGLLLLLLLLLLLLLGLLGLLLGLLGGGGLLL
     """
     
     if dimers:
-        N = int(N / 2)
+        n = int(n / 2)
 
     polymer_pos = []
         
     if fixed: 
-        g_idx = np.random.choice(N, int(N * g_prob), replace=False)
+        g_idx = np.random.choice(n, int(n * g_prob), replace=False)
 
-        polymer_pos = np.zeros(N, dtype=int)
+        polymer_pos = np.zeros(n, dtype=int)
         polymer_pos[g_idx] = 1
     else:
-        polymer_pos = np.array([1 if np.random.random() <  g_prob else 0 for _ in range(N)])
+        polymer_pos = np.array([1 if np.random.random() <  g_prob else 0 for _ in range(n)])
 
     polymer = ""
-    for i in range(N):
+    for i in range(n):
         if not dimers:
             if polymer_pos[i] == 1: polymer += "G"
             else: polymer += "L"
@@ -62,50 +62,61 @@ def calc_stats(polymer: str):
     """
     n = len(polymer)
 
-    num_GGs = 0
+    num_GGs, num_LLs, num_GLs, num_LGs = 0, 0, 0, 0
     for i in range(n - 1):
         if polymer[i] == 'G' and polymer[i+1] == 'G':
             num_GGs += 1
-    
-    num_LLs = 0
-    for i in range(n - 1):
         if polymer[i] == 'L' and polymer[i+1] == 'L':
             num_LLs += 1
-
-    num_GLs = 0
-    for i in range(n - 1):
         if polymer[i] == 'G' and polymer[i+1] == 'L':
             num_GLs += 1
-    
-    num_LGs = 0
-    for i in range(n - 1):
         if polymer[i] == 'L' and polymer[i+1] == 'G':
             num_LGs += 1
 
     return num_GGs, num_LLs, num_GLs, num_LGs
 
+def calc_ratio(polymer: str):
+    """
+    Calculate the ratio of Gs to Ls in polymer
+
+    Args:
+        polymer (str): input polymer of L and G monomers
+
+    Returns:
+        float: ratio of Gs to Ls
+    """
+    num_Gs = polymer.count('G')
+    num_Ls = polymer.count('L')
+    
+    return num_Gs / num_Ls
+
 def main():
     N = 10000
-    p_length = 48 * 8
+    p_length = 100
     
     GGs, LLs, GLs, LGs = [], [], [], []
 
-    with open(f'sample_polymers_{p_length}.out', 'w') as f:
+    ratios = []
+    with open(f'data/sample_polymers_{p_length}.out', 'w') as f:
         for _ in range(N):
-            polymer = gen(p_length, fixed=True, dimers=True)
+            polymer = gen(p_length, fixed=True, dimers=False)
             f.write(polymer + '\n')
 
             (GG, LL, GL, LG) = calc_stats(polymer)
             GGs.append(GG)
             LLs.append(LL)
             GLs.append(GL)
-            LGs.append(LG)
+            LGs.append(float(LG))
+
+            ratios.append(calc_ratio(polymer))
 
     GGs = np.array(GGs)
     LLs = np.array(LLs)
     GLs = np.array(GLs)
     LGs = np.array(LGs)
 
+    print(f"n: {p_length}")
+    print("-" * 20)
     print(f"Mean G-Gs: {np.mean(GGs):.2f}")
     print(f"SEM G-Gs:  {np.std(GGs) / np.sqrt(N - 1):.2f}")
     print("-" * 20)
@@ -138,6 +149,8 @@ def main():
     print()
     print(f"R_c (mean)    = {np.mean(GGs / GLs):.2f}")
     print(f"R_c (sem)     = {np.std(GGs / GLs) / np.sqrt(N - 1):.2f}")
+    print()
+    print(f"Ratio of L/G (mean) = {np.mean(ratios):.2f}")
 
 if __name__ == "__main__":
     main()

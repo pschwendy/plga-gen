@@ -1,0 +1,6 @@
+# cache
+.vscode
+.ipynb_checkpoints
+
+# c++ executable
+gen
